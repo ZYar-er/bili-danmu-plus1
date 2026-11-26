@@ -51,16 +51,14 @@ export const CHAT_INPUT_SELECTORS = [
   '.chat-input',
 ];
 
-// 发送按钮：新版 UI 是 div.send-btn-wrapper（内部 span.send-btn-icon），旧版是 button.send-btn
+// 发送按钮：在输入框所在容器内查找（.chat-input-ctnr / #fullscreen-danmaku-vm），
+// 新版 UI 是 div.send-btn-wrapper（内部 span.send-btn-icon），旧版是 button.send-btn
 export const SEND_BUTTON_SELECTORS = [
-  '.chat-main-row .send-btn-wrapper',
-  '.chat-input-ctnr .send-btn-wrapper',
   '.send-btn-wrapper',
-  '.chat-input-ctnr button.send-btn',
+  'button.send-btn',
   '.bl-button.send-btn',
-  '#fullscreen-danmaku-vm .send-danmaku',
-  '#fullscreen-danmaku-vm .send-btn-wrapper',
-  '#fullscreen-danmaku-vm button',
+  '.send-danmaku',
+  '.send-btn-icon',
 ];
 
 // 持久化

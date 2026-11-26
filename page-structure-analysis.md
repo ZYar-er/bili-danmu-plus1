@@ -240,7 +240,7 @@ B站会销毁/重建容器，优先链逐级降级是正确策略。**无需修�
 | `#fullscreen-danmaku-vm .chat-input` | 高 | 旧版全屏（新版需实测） |
 | `.chat-input` 类名 | 高（CSS 类名稳定） | 兜底 |
 
-发送按钮同理按「新版 `.send-btn-wrapper` → 旧版 `button.send-btn` → 全屏 `.send-danmaku` → 文案匹配」降级。
+发送按钮同理按「新版 `.send-btn-wrapper` → 旧版 `button.send-btn` → 全屏 `.send-danmaku` → 文案匹配」降级，但只在输入框自己的容器（`.chat-input-ctnr` / `#fullscreen-danmaku-vm`）内查找，找不到就回车，避免跨 scope 点错按钮。
 
 ---
 

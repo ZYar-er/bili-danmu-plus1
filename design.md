@@ -103,8 +103,8 @@ B站弹幕DOM特征：
 - DM_NODE_SELECTOR = `.bili-danmaku-x-dm[role="comment"]`
 - DM_CONTAINER_SELECTORS = 优先级链：`#live-player .web-player-danmaku .danmaku-item-container` → `.danmaku-item-container` → `.web-player-danmaku` → `.live-player-dm-wrap`
 - CHAT_INPUT_SELECTORS = 新版 `.chat-main-row .chat-input-ctnr textarea.chat-input` → 旧版 `.chat-input-ctnr textarea.chat-input` → 全屏 `#fullscreen-danmaku-vm textarea/input.chat-input` → `.chat-input`
-- SEND_BUTTON_SELECTORS = 新版 `.send-btn-wrapper`（内部 `.send-btn-icon`）→ 旧版 `button.send-btn` / `.bl-button.send-btn` → 全屏 `.send-danmaku` → 文案匹配
-- PLAYER_SELECTORS = `.bilibili-live-player-video` / `#live-player` / `#live-player-ctnr` / `.live-player-mounter` / `.live-player-container` / `.player-section`
+- SEND_BUTTON_SELECTORS = 在输入框自己的容器（`.chat-input-ctnr` / `#fullscreen-danmaku-vm` / `.fullscreen-danmaku-container`）内查找：`.send-btn-wrapper` → `button.send-btn` / `.bl-button.send-btn` → `.send-danmaku` → 文案匹配；容器内找不到就用 Enter，不跨 scope 取侧栏按钮
+- PLAYER_SELECTORS = 按优先级 `#live-player` → `#live-player-ctnr` → `.live-player-mounter` → `.bilibili-live-player-video` → `.live-player-container` → `.player-section`
 - 选择器链通过`firstMatch(scope,selectors)`遍历，返回首个存在的元素
 
 ### 活动页支持

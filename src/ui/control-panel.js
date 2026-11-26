@@ -107,7 +107,7 @@ function findEntryColor() {
     var ic = getComputedStyle(icons[j]).color;
     if (ic) return ic;
   }
-  return getComputedStyle(document.body).color || '#fff';
+  return getComputedStyle(document.body).color;
 }
 
 function entryBaseStyle() {

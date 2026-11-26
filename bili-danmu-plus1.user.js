@@ -77,14 +77,11 @@
     ".chat-input"
   ];
   var SEND_BUTTON_SELECTORS = [
-    ".chat-main-row .send-btn-wrapper",
-    ".chat-input-ctnr .send-btn-wrapper",
     ".send-btn-wrapper",
-    ".chat-input-ctnr button.send-btn",
+    "button.send-btn",
     ".bl-button.send-btn",
-    "#fullscreen-danmaku-vm .send-danmaku",
-    "#fullscreen-danmaku-vm .send-btn-wrapper",
-    "#fullscreen-danmaku-vm button"
+    ".send-danmaku",
+    ".send-btn-icon"
   ];
   function storageGet(key, def) {
     try {
@@ -926,20 +923,18 @@
     el.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true, inputType: "insertText" }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
-  function getScope2() {
-    var fs = document.fullscreenElement;
-    return fs && fs.querySelector ? fs : document;
-  }
   function findInput() {
-    var scope = getScope2();
+    var scope = getScope();
     return firstMatch(scope, CHAT_INPUT_SELECTORS) || firstMatch(document, CHAT_INPUT_SELECTORS);
   }
-  function findSendBtn() {
-    var scope = getScope2();
-    var btn = firstMatch(scope, SEND_BUTTON_SELECTORS) || firstMatch(document, SEND_BUTTON_SELECTORS);
+  function findSendBtn(input) {
+    var container = input.closest(".chat-input-ctnr") || input.closest("#fullscreen-danmaku-vm") || input.closest(".fullscreen-danmaku-container");
+    if (!container)
+      return null;
+    var btn = firstMatch(container, SEND_BUTTON_SELECTORS);
     if (btn)
       return btn;
-    var btns = document.querySelectorAll("button");
+    var btns = container.querySelectorAll("button");
     for (var i = 0; i < btns.length; i++) {
       var text = (btns[i].textContent || "").trim();
       if (/^发送/.test(text))
@@ -971,7 +966,7 @@
     input.focus();
     setNativeValue(input, finalText);
     state.lastSendAt = now;
-    var btn = findSendBtn();
+    var btn = findSendBtn(input);
     if (btn) {
       clickSendBtn(btn);
       setDbg("lastErr", "");
@@ -1086,7 +1081,7 @@
       if (ic)
         return ic;
     }
-    return getComputedStyle(document.body).color || "#fff";
+    return getComputedStyle(document.body).color;
   }
   function entryBaseStyle() {
     return "box-sizing:border-box;background:transparent;border:0;padding:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:1;color:" + findEntryColor() + ";";

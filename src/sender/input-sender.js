@@ -1,5 +1,6 @@
 import { CONFIG, CHAT_INPUT_SELECTORS, SEND_BUTTON_SELECTORS } from '../config.js';
 import { state } from '../state.js';
+import { getScope } from '../core/env-detector.js';
 import { firstMatch } from '../utils.js';
 import { setDbg } from '../ui/debug-panel.js';
 import { canSend, sendSpecialEmoji } from '../special-emoji.js';
@@ -13,23 +14,22 @@ function setNativeValue(el, value) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function getScope() {
-  var fs = document.fullscreenElement;
-  return fs && fs.querySelector ? fs : document;
-}
-
 // 精准 → 宽泛 降级链（新版 UI 选择器在前，旧版在后）
 function findInput() {
   var scope = getScope();
   return firstMatch(scope, CHAT_INPUT_SELECTORS) || firstMatch(document, CHAT_INPUT_SELECTORS);
 }
 
-function findSendBtn() {
-  var scope = getScope();
-  var btn = firstMatch(scope, SEND_BUTTON_SELECTORS) || firstMatch(document, SEND_BUTTON_SELECTORS);
+// 发送按钮只在输入框自己的容器里找，避免全屏输入框配侧栏按钮的错配
+function findSendBtn(input) {
+  var container = input.closest('.chat-input-ctnr')
+    || input.closest('#fullscreen-danmaku-vm')
+    || input.closest('.fullscreen-danmaku-container');
+  if (!container) return null;
+  var btn = firstMatch(container, SEND_BUTTON_SELECTORS);
   if (btn) return btn;
-  // 宽泛扫描：文本匹配（旧版按钮文案「发送」）
-  var btns = document.querySelectorAll('button');
+  // 容器内文案匹配兜底（旧版按钮文案「发送」）
+  var btns = container.querySelectorAll('button');
   for (var i = 0; i < btns.length; i++) {
     var text = (btns[i].textContent || '').trim();
     if (/^发送/.test(text)) return btns[i];
@@ -63,7 +63,7 @@ export function sendDanmaku(payload) {
   input.focus();
   setNativeValue(input, finalText);
   state.lastSendAt = now;
-  var btn = findSendBtn();
+  var btn = findSendBtn(input);
   if (btn) { clickSendBtn(btn); setDbg('lastErr', ''); }
   else {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
