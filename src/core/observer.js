@@ -1,6 +1,6 @@
 import { getScope } from './env-detector.js';
 import { firstMatch } from '../utils.js';
-import { DM_CONTAINER_SELECTORS, DM_CLASS, CONFIG } from '../config.js';
+import { DM_CONTAINER_SELECTORS, DM_CLASS, CONFIG, PLAYER_SELECTORS } from '../config.js';
 import { state } from '../state.js';
 import { getDmText } from './danmu-parser.js';
 import { cacheParsed, getCachedParsed } from './danmu-cache.js';
@@ -74,7 +74,7 @@ export function bindObserverTarget(container) {
   var scope = getScope();
   var dmContainer = container && container.isConnected ? container : findDmContainer();
   var nextTarget = dmContainer
-    || scope.querySelector('.bilibili-live-player-video, #live-player')
+    || firstMatch(scope, PLAYER_SELECTORS)
     || scope;
   if (state.dmObserverTarget === nextTarget) return;
   if (_mo) _mo.disconnect();

@@ -83,7 +83,7 @@ B站弹幕DOM特征：
 - fullscreenchange→设dmObserverTarget=null强制重绑MO
 
 ### 页内控制面板（control-panel.js）
-- 入口：作为 `.control-panel-icon-row.superChat .icon-right-part` 的首个子元素插入（点赞按钮左侧），2s 轮询检测控制栏重建并重挂载；控制栏缺失时兜底为右下角悬浮齿轮
+- 入口：旧版作为 `.control-panel-icon-row.superChat .icon-right-part` 的首个子元素插入（点赞按钮左侧）；新版 UI 没有图标行，改挂到 `.chat-main-row` 首个子元素（输入框左侧）。2s 轮询检测控制栏重建并重挂载；两者都缺失时兜底为右下角悬浮齿轮。`document.fullscreenElement` 存在时隐藏入口并关闭面板，退出全屏后恢复。图标颜色跟随当前可见弹幕输入框的文字色（白底深色、黑底白色），透明底、无边框，随主题变化自动刷新
 - 浮层：`position:fixed` 锚定在入口图标上方（空间不足则下方），视口内 clamp，追加到 `root()` 以兼容全屏
 - 交互：外部 `mousedown` 或 `Esc` 关闭；设置变更即写 `CONFIG` 并 `storageSet`，存储 key 保持不变
 - 设置项：发送冷却开关 + 间隔下拉（关闭时禁用）、按钮透明度 5 档、调试面板开关、重置（二次确认后清配置并 reload）
@@ -102,6 +102,9 @@ B站弹幕DOM特征：
 ### 选择器策略
 - DM_NODE_SELECTOR = `.bili-danmaku-x-dm[role="comment"]`
 - DM_CONTAINER_SELECTORS = 优先级链：`#live-player .web-player-danmaku .danmaku-item-container` → `.danmaku-item-container` → `.web-player-danmaku` → `.live-player-dm-wrap`
+- CHAT_INPUT_SELECTORS = 新版 `.chat-main-row .chat-input-ctnr textarea.chat-input` → 旧版 `.chat-input-ctnr textarea.chat-input` → 全屏 `#fullscreen-danmaku-vm textarea/input.chat-input` → `.chat-input`
+- SEND_BUTTON_SELECTORS = 新版 `.send-btn-wrapper`（内部 `.send-btn-icon`）→ 旧版 `button.send-btn` / `.bl-button.send-btn` → 全屏 `.send-danmaku` → 文案匹配
+- PLAYER_SELECTORS = `.bilibili-live-player-video` / `#live-player` / `#live-player-ctnr` / `.live-player-mounter` / `.live-player-container` / `.player-section`
 - 选择器链通过`firstMatch(scope,selectors)`遍历，返回首个存在的元素
 
 ### 活动页支持

@@ -31,7 +31,37 @@ export const DM_CONTAINER_SELECTORS = [
 
 export const DM_CLASS = 'bili-danmaku-x-dm';
 export const DM_NODE_SELECTOR = '.' + DM_CLASS + '[role="comment"]';
-export const PLAYER_SELECTORS = '.bilibili-live-player-video, #live-player, .live-player-container';
+// 旧版播放器 / 新版播放器（live-player-mounter、live-player-ctnr），按优先级降级
+export const PLAYER_SELECTORS = [
+  '#live-player',
+  '#live-player-ctnr',
+  '.live-player-mounter',
+  '.bilibili-live-player-video',
+  '.live-player-container',
+  '.player-section',
+];
+
+// 弹幕输入框：新版 UI 把输入区收进 .chat-main-row，textarea 仍是 .chat-input
+export const CHAT_INPUT_SELECTORS = [
+  '.chat-main-row .chat-input-ctnr textarea.chat-input',
+  '.chat-input-ctnr textarea.chat-input',
+  '.chat-input-area textarea.chat-input',
+  '#fullscreen-danmaku-vm textarea.chat-input',
+  '#fullscreen-danmaku-vm input.chat-input',
+  '.chat-input',
+];
+
+// 发送按钮：新版 UI 是 div.send-btn-wrapper（内部 span.send-btn-icon），旧版是 button.send-btn
+export const SEND_BUTTON_SELECTORS = [
+  '.chat-main-row .send-btn-wrapper',
+  '.chat-input-ctnr .send-btn-wrapper',
+  '.send-btn-wrapper',
+  '.chat-input-ctnr button.send-btn',
+  '.bl-button.send-btn',
+  '#fullscreen-danmaku-vm .send-danmaku',
+  '#fullscreen-danmaku-vm .send-btn-wrapper',
+  '#fullscreen-danmaku-vm button',
+];
 
 // 持久化
 export function storageGet(key, def) {

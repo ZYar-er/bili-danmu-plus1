@@ -21,14 +21,26 @@ export function initControlPanel(plusBtn) {
 
 export function ensureControlPanel() {
   if (!_entry || !_panel) return;
-  var rightPart = findRightPart();
-  if (rightPart && _entry.parentNode !== rightPart) {
+  // 全屏时隐藏设置入口，退出全屏后由后续调用恢复
+  if (document.fullscreenElement) {
     closePanel();
-    rightPart.insertBefore(_entry, rightPart.firstChild);
-    setEntryInBarStyle();
-  } else if (!rightPart && _entry.parentNode !== root()) {
-    closePanel();
-    root().appendChild(_entry);
+    _entry.style.display = 'none';
+    return;
+  }
+  var host = findEntryHost();
+  if (host) {
+    if (_entry.parentNode !== host.el) {
+      closePanel();
+      host.el.insertBefore(_entry, host.el.firstChild);
+    }
+    if (host.mode === 'input-row') setEntryInInputRowStyle();
+    else setEntryInBarStyle();
+  } else {
+    if (_entry.parentNode !== root()) {
+      closePanel();
+      root().appendChild(_entry);
+    }
+    // 无条件重设兜底样式，确保全屏退出后 display 能恢复
     setEntryFallbackStyle();
   }
   if (_panelOpen) {
@@ -38,9 +50,22 @@ export function ensureControlPanel() {
   }
 }
 
-function findRightPart() {
-  return document.querySelector('.control-panel-icon-row.superChat .icon-right-part')
-    || document.querySelector('.control-panel-icon-row .icon-right-part');
+function queryEntryHost(scope) {
+  // 旧版：图标行右侧
+  var bar = scope.querySelector('.control-panel-icon-row.superChat .icon-right-part')
+    || scope.querySelector('.control-panel-icon-row .icon-right-part');
+  if (bar) return { el: bar, mode: 'bar' };
+  // 新版：输入行（.chat-main-row > .chat-input-ctnr），插到输入框左侧
+  var inputRow = scope.querySelector('.chat-main-row');
+  if (inputRow && inputRow.querySelector('.chat-input-ctnr')) {
+    return { el: inputRow, mode: 'input-row' };
+  }
+  return null;
+}
+
+function findEntryHost() {
+  // 全屏已在 ensureControlPanel 里提前返回（隐藏入口），这里只处理正常页面
+  return queryEntryHost(document);
 }
 
 function createEntry() {
@@ -58,8 +83,44 @@ function createEntry() {
   });
 }
 
+// 跟随弹幕输入框的主题色：白底用深色图标，黑底用白色图标，透明底无边框
+function findEntryColor() {
+  var scopes = [];
+  if (_entry && _entry.parentElement) {
+    var near = _entry.parentElement.closest('.chat-main-row, #chat-control-panel-vm, .chat-control-panel, .control-panel-ctnr');
+    if (near) scopes.push(near);
+  }
+  scopes.push(document);
+  for (var s = 0; s < scopes.length; s++) {
+    var inputs = scopes[s].querySelectorAll('.chat-input');
+    for (var i = 0; i < inputs.length; i++) {
+      var r = inputs[i].getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) continue;
+      var color = getComputedStyle(inputs[i]).color;
+      if (color) return color;
+    }
+  }
+  var icons = document.querySelectorAll('.danmaku-preference-btn, .emoticons-panel, .block-danmaku-btn');
+  for (var j = 0; j < icons.length; j++) {
+    var ir = icons[j].getBoundingClientRect();
+    if (ir.width <= 0 || ir.height <= 0) continue;
+    var ic = getComputedStyle(icons[j]).color;
+    if (ic) return ic;
+  }
+  return getComputedStyle(document.body).color || '#fff';
+}
+
+function entryBaseStyle() {
+  return 'box-sizing:border-box;background:transparent;border:0;padding:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:1;color:' + findEntryColor() + ';';
+}
+
 function setEntryInBarStyle() {
-  _entry.style.cssText = 'background:transparent;border:0;padding:0;margin:0 6px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;opacity:.85;';
+  _entry.style.cssText = 'margin:0 6px;width:24px;height:24px;' + entryBaseStyle();
+}
+
+// 新版 UI 没有图标行：入口放进输入行左侧，随弹幕输入框同一行显示
+function setEntryInInputRowStyle() {
+  _entry.style.cssText = 'flex:0 0 auto;margin:0 2px;width:24px;height:24px;' + entryBaseStyle();
 }
 
 function setEntryFallbackStyle() {

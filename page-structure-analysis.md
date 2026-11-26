@@ -171,6 +171,35 @@
 
 两个输入框共享 `.chat-input` 类名。全屏用 `<input>`，侧栏用 `<textarea>`。
 
+### 新版直播间 UI（2026-11 观察）
+
+新版把原来的图标行 `.control-panel-icon-row` 收进了输入行，侧栏控制区变为：
+
+```
+#chat-control-panel-vm.chat-control-panel
+  └ #control-panel-ctnr-box.control-panel-ctnr
+      └ .chat-main-row
+          ├ .chat-input-ctnr
+          │   ├ .danmaku-preference-btn            ← 部分直播间 display:none
+          │   ├ .input-divider
+          │   ├ .chat-input-area > textarea.chat-input
+          │   ├ .emoticons-panel[title="表情包"]
+          │   └ .send-btn-wrapper > span.send-btn-icon   ← 发送按钮是 div，不再是 button
+          └ .icon-right-part
+              ├ .block-danmaku-btn
+              ├ .super-chat > .super-chat-icon
+              └ .like-btn
+```
+
+差异与影响：
+
+- 旧版 `.control-panel-icon-row` 已不存在；新版 `.icon-right-part` 宽度为 0（图标折叠/隐藏），不能作为设置入口。设置入口改挂到 `.chat-main-row` 左侧（输入框左边）。
+- 输入框仍用 `.chat-input-ctnr textarea.chat-input`。
+- 发送按钮是 `div.send-btn-wrapper`（内部 `span.send-btn-icon`），旧版是 `button.send-btn`；点击时优先找内部可点元素。
+- `.send-btn-wrapper` 初始 `display:none`，输入内容后由 Vue 在下一 tick 显示；程序化写值后立即点击仍能触发。
+- 播放器根节点变为 `#live-player.live-player-mounter`，外层有 `#live-player-ctnr.live-player-ctnr`。
+- 全屏输入 `#fullscreen-danmaku-vm` 在新版中可能为空，全屏输入/发送需按实际全屏 DOM 再验证。
+
 ---
 
 ## 三、选择器评估
@@ -206,9 +235,12 @@ B站会销毁/重建容器，优先链逐级降级是正确策略。**无需修�
 
 | 查找方式 | 可靠性 | 覆盖 |
 |---|---|---|
-| placeholder 包含"弹幕" | 中（文案可能变） | 仅全屏输入框 |
-| `.chat-input` 类名 | 高（CSS 类名稳定） | 全屏 + 侧栏 |
-| `#fullscreen-danmaku-vm .chat-input` | 最高 | 仅全屏 |
+| `.chat-main-row .chat-input-ctnr textarea.chat-input` | 最高 | 新版侧栏 |
+| `.chat-input-ctnr textarea.chat-input` | 最高 | 旧版侧栏；新版仍匹配 |
+| `#fullscreen-danmaku-vm .chat-input` | 高 | 旧版全屏（新版需实测） |
+| `.chat-input` 类名 | 高（CSS 类名稳定） | 兜底 |
+
+发送按钮同理按「新版 `.send-btn-wrapper` → 旧版 `button.send-btn` → 全屏 `.send-danmaku` → 文案匹配」降级。
 
 ---
 

@@ -1,5 +1,6 @@
-import { CONFIG } from '../config.js';
+import { CONFIG, CHAT_INPUT_SELECTORS, SEND_BUTTON_SELECTORS } from '../config.js';
 import { state } from '../state.js';
+import { firstMatch } from '../utils.js';
 import { setDbg } from '../ui/debug-panel.js';
 import { canSend, sendSpecialEmoji } from '../special-emoji.js';
 
@@ -12,39 +13,40 @@ function setNativeValue(el, value) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-// 精准 → 宽泛 降级链
+function getScope() {
+  var fs = document.fullscreenElement;
+  return fs && fs.querySelector ? fs : document;
+}
+
+// 精准 → 宽泛 降级链（新版 UI 选择器在前，旧版在后）
 function findInput() {
-  // 1. 侧栏：容器限定 textarea（始终可见，优先）
-  var el = document.querySelector('.chat-input-ctnr textarea.chat-input');
-  if (el) return el;
-  // 2. 全屏：容器限定 input
-  el = document.querySelector('#fullscreen-danmaku-vm input.chat-input');
-  if (el) return el;
-  // 3. 宽泛兜底
-  return document.querySelector('.chat-input');
+  var scope = getScope();
+  return firstMatch(scope, CHAT_INPUT_SELECTORS) || firstMatch(document, CHAT_INPUT_SELECTORS);
 }
 
 function findSendBtn() {
-  var btn;
-  // 1. 侧栏：容器限定发送按钮（最精确）
-  btn = document.querySelector('.chat-input-ctnr button.send-btn');
+  var scope = getScope();
+  var btn = firstMatch(scope, SEND_BUTTON_SELECTORS) || firstMatch(document, SEND_BUTTON_SELECTORS);
   if (btn) return btn;
-  // 2. 侧栏：类名限定
-  btn = document.querySelector('.bl-button.send-btn');
-  if (btn) return btn;
-  // 3. 全屏：容器限定
-  btn = document.querySelector('#fullscreen-danmaku-vm .send-danmaku');
-  if (btn) return btn;
-  // 4. 全屏：容器内任意 button
-  btn = document.querySelector('#fullscreen-danmaku-vm button');
-  if (btn) return btn;
-  // 5. 宽泛扫描：文本匹配
+  // 宽泛扫描：文本匹配（旧版按钮文案「发送」）
   var btns = document.querySelectorAll('button');
   for (var i = 0; i < btns.length; i++) {
     var text = (btns[i].textContent || '').trim();
     if (/^发送/.test(text)) return btns[i];
   }
   return null;
+}
+
+function clickSendBtn(btn) {
+  // 新版 UI：按钮是 div.send-btn-wrapper，真正可点的是内部 span.send-btn-icon；
+  // 旧版 UI：wrapper 里是 button.send-btn。两种都先找内部真正可点的元素。
+  var target = btn.querySelector && (
+    btn.querySelector('.send-btn-icon')
+    || btn.querySelector('button.send-btn')
+    || btn.querySelector('.bl-button.send-btn')
+    || btn.querySelector('button')
+  );
+  (target || btn).click();
 }
 
 export function sendDanmaku(payload) {
@@ -62,7 +64,7 @@ export function sendDanmaku(payload) {
   setNativeValue(input, finalText);
   state.lastSendAt = now;
   var btn = findSendBtn();
-  if (btn) { btn.click(); setDbg('lastErr', ''); }
+  if (btn) { clickSendBtn(btn); setDbg('lastErr', ''); }
   else {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
     input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));

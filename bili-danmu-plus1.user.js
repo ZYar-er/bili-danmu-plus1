@@ -60,6 +60,32 @@
   ];
   var DM_CLASS = "bili-danmaku-x-dm";
   var DM_NODE_SELECTOR = "." + DM_CLASS + '[role="comment"]';
+  var PLAYER_SELECTORS = [
+    "#live-player",
+    "#live-player-ctnr",
+    ".live-player-mounter",
+    ".bilibili-live-player-video",
+    ".live-player-container",
+    ".player-section"
+  ];
+  var CHAT_INPUT_SELECTORS = [
+    ".chat-main-row .chat-input-ctnr textarea.chat-input",
+    ".chat-input-ctnr textarea.chat-input",
+    ".chat-input-area textarea.chat-input",
+    "#fullscreen-danmaku-vm textarea.chat-input",
+    "#fullscreen-danmaku-vm input.chat-input",
+    ".chat-input"
+  ];
+  var SEND_BUTTON_SELECTORS = [
+    ".chat-main-row .send-btn-wrapper",
+    ".chat-input-ctnr .send-btn-wrapper",
+    ".send-btn-wrapper",
+    ".chat-input-ctnr button.send-btn",
+    ".bl-button.send-btn",
+    "#fullscreen-danmaku-vm .send-danmaku",
+    "#fullscreen-danmaku-vm .send-btn-wrapper",
+    "#fullscreen-danmaku-vm button"
+  ];
   function storageGet(key, def) {
     try {
       const v = GM_getValue(key);
@@ -611,7 +637,7 @@
     }
     var scope = getScope();
     var dmContainer = container && container.isConnected ? container : findDmContainer();
-    var nextTarget = dmContainer || scope.querySelector(".bilibili-live-player-video, #live-player") || scope;
+    var nextTarget = dmContainer || firstMatch(scope, PLAYER_SELECTORS) || scope;
     if (state.dmObserverTarget === nextTarget)
       return;
     if (_mo)
@@ -900,27 +926,17 @@
     el.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true, inputType: "insertText" }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
+  function getScope2() {
+    var fs = document.fullscreenElement;
+    return fs && fs.querySelector ? fs : document;
+  }
   function findInput() {
-    var el = document.querySelector(".chat-input-ctnr textarea.chat-input");
-    if (el)
-      return el;
-    el = document.querySelector("#fullscreen-danmaku-vm input.chat-input");
-    if (el)
-      return el;
-    return document.querySelector(".chat-input");
+    var scope = getScope2();
+    return firstMatch(scope, CHAT_INPUT_SELECTORS) || firstMatch(document, CHAT_INPUT_SELECTORS);
   }
   function findSendBtn() {
-    var btn;
-    btn = document.querySelector(".chat-input-ctnr button.send-btn");
-    if (btn)
-      return btn;
-    btn = document.querySelector(".bl-button.send-btn");
-    if (btn)
-      return btn;
-    btn = document.querySelector("#fullscreen-danmaku-vm .send-danmaku");
-    if (btn)
-      return btn;
-    btn = document.querySelector("#fullscreen-danmaku-vm button");
+    var scope = getScope2();
+    var btn = firstMatch(scope, SEND_BUTTON_SELECTORS) || firstMatch(document, SEND_BUTTON_SELECTORS);
     if (btn)
       return btn;
     var btns = document.querySelectorAll("button");
@@ -930,6 +946,10 @@
         return btns[i];
     }
     return null;
+  }
+  function clickSendBtn(btn) {
+    var target = btn.querySelector && (btn.querySelector(".send-btn-icon") || btn.querySelector("button.send-btn") || btn.querySelector(".bl-button.send-btn") || btn.querySelector("button"));
+    (target || btn).click();
   }
   function sendDanmaku(payload) {
     var text = typeof payload === "string" ? payload : payload && payload.text;
@@ -953,7 +973,7 @@
     state.lastSendAt = now;
     var btn = findSendBtn();
     if (btn) {
-      btn.click();
+      clickSendBtn(btn);
       setDbg("lastErr", "");
     } else {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true }));
@@ -982,14 +1002,26 @@
   function ensureControlPanel() {
     if (!_entry || !_panel)
       return;
-    var rightPart = findRightPart();
-    if (rightPart && _entry.parentNode !== rightPart) {
+    if (document.fullscreenElement) {
       closePanel();
-      rightPart.insertBefore(_entry, rightPart.firstChild);
-      setEntryInBarStyle();
-    } else if (!rightPart && _entry.parentNode !== root()) {
-      closePanel();
-      root().appendChild(_entry);
+      _entry.style.display = "none";
+      return;
+    }
+    var host = findEntryHost();
+    if (host) {
+      if (_entry.parentNode !== host.el) {
+        closePanel();
+        host.el.insertBefore(_entry, host.el.firstChild);
+      }
+      if (host.mode === "input-row")
+        setEntryInInputRowStyle();
+      else
+        setEntryInBarStyle();
+    } else {
+      if (_entry.parentNode !== root()) {
+        closePanel();
+        root().appendChild(_entry);
+      }
       setEntryFallbackStyle();
     }
     if (_panelOpen) {
@@ -999,8 +1031,18 @@
       anchorPanel();
     }
   }
-  function findRightPart() {
-    return document.querySelector(".control-panel-icon-row.superChat .icon-right-part") || document.querySelector(".control-panel-icon-row .icon-right-part");
+  function queryEntryHost(scope) {
+    var bar = scope.querySelector(".control-panel-icon-row.superChat .icon-right-part") || scope.querySelector(".control-panel-icon-row .icon-right-part");
+    if (bar)
+      return { el: bar, mode: "bar" };
+    var inputRow = scope.querySelector(".chat-main-row");
+    if (inputRow && inputRow.querySelector(".chat-input-ctnr")) {
+      return { el: inputRow, mode: "input-row" };
+    }
+    return null;
+  }
+  function findEntryHost() {
+    return queryEntryHost(document);
   }
   function createEntry() {
     _entry = document.createElement("button");
@@ -1016,8 +1058,44 @@
       togglePanel();
     });
   }
+  function findEntryColor() {
+    var scopes = [];
+    if (_entry && _entry.parentElement) {
+      var near = _entry.parentElement.closest(".chat-main-row, #chat-control-panel-vm, .chat-control-panel, .control-panel-ctnr");
+      if (near)
+        scopes.push(near);
+    }
+    scopes.push(document);
+    for (var s = 0; s < scopes.length; s++) {
+      var inputs = scopes[s].querySelectorAll(".chat-input");
+      for (var i = 0; i < inputs.length; i++) {
+        var r = inputs[i].getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0)
+          continue;
+        var color = getComputedStyle(inputs[i]).color;
+        if (color)
+          return color;
+      }
+    }
+    var icons = document.querySelectorAll(".danmaku-preference-btn, .emoticons-panel, .block-danmaku-btn");
+    for (var j = 0; j < icons.length; j++) {
+      var ir = icons[j].getBoundingClientRect();
+      if (ir.width <= 0 || ir.height <= 0)
+        continue;
+      var ic = getComputedStyle(icons[j]).color;
+      if (ic)
+        return ic;
+    }
+    return getComputedStyle(document.body).color || "#fff";
+  }
+  function entryBaseStyle() {
+    return "box-sizing:border-box;background:transparent;border:0;padding:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:1;color:" + findEntryColor() + ";";
+  }
   function setEntryInBarStyle() {
-    _entry.style.cssText = "background:transparent;border:0;padding:0;margin:0 6px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;opacity:.85;";
+    _entry.style.cssText = "margin:0 6px;width:24px;height:24px;" + entryBaseStyle();
+  }
+  function setEntryInInputRowStyle() {
+    _entry.style.cssText = "flex:0 0 auto;margin:0 2px;width:24px;height:24px;" + entryBaseStyle();
   }
   function setEntryFallbackStyle() {
     _entry.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:" + (UI.Z_INDEX - 2) + ";width:36px;height:36px;border:1px solid rgba(255,255,255,.3);border-radius:8px;background:rgba(18,20,24,.9);color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.35);opacity:.9;";
